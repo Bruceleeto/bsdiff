@@ -15,7 +15,7 @@ WIN32_FLAG = -D_WIN32
 endif
 
 CFLAGS += -DBSDIFF_EXECUTABLE -DBSPATCH_EXECUTABLE $(BIGFILES) -O3 -fdata-sections -ffunction-sections -I. $(O_BINARY_FLAG) $(WIN32_FLAG)
-CFLAGS_STRIP = -Wl,--gc-sections -Wl,--strip-all
+CFLAGS_STRIP = 
 
 BZIP2_OBJS = blocksort.o huffman.o crctable.o randtable.o compress.o decompress.o bzlib.o
 
