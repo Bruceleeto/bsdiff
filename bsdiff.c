@@ -355,35 +355,43 @@ int bsdiff(const uint8_t* old, int64_t oldsize, const uint8_t* new, int64_t news
 #include <sys/types.h>
 
 #include <bzlib.h>
-#include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-    /*
-    https://github.com/amireh/Karazeh/blob/master/src/bsdiff.cpp
-    or take a look at
-    https://github.com/HoverRace/HoverRace/blob/master/updater/bsdiff/bsdiff.cpp
-    or
-    https://chromium.googlesource.com/chromium/src/courgette/+/master/third_party/bsdiff_create.cc
-    I use MinGW GCC on Windows, so...
-    */
-#ifndef _WIN32
-#include <err.h>
+#ifdef _WIN32
+#include <io.h>
+#ifndef O_BINARY
 #define O_BINARY 0x8000
+#endif
 #else
-    static void err(int i, ...)
-    {
-        cout << "dfghgh" << endl;
-        exit(i);
-    }
-    static void errx(int i, ...)
-    {
-        cout << "xxxdfghgh" << endl;
-        exit(i);
-    }
-#endif // _WIN32
+#include <err.h>
+#endif
+
+#ifdef _WIN32
+// Provide alternative implementations for err and errx
+static void err(int eval, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    fprintf(stderr, "error: ");
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    va_end(ap);
+    exit(eval);
+}
+
+static void errx(int eval, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    fprintf(stderr, "error: ");
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    va_end(ap);
+    exit(eval);
+}
+#endif
+
 
 static int bz2_write(struct bsdiff_stream* stream, const void* buffer, int size)
 {
