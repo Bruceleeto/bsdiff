@@ -27,6 +27,47 @@
 
 #include "bspatch.h"
 
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <bzlib.h>
+
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#ifndef O_BINARY
+#define O_BINARY 0x8000
+#endif
+#else
+#include <unistd.h>
+#include <err.h>
+#endif
+
+#ifdef _WIN32
+#include <errno.h>
+static void err(int eval, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    fprintf(stderr, "error: ");
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, ": %s\n", strerror(errno));
+    va_end(ap);
+    exit(eval);
+}
+
+static void errx(int eval, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    fprintf(stderr, "error: ");
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    va_end(ap);
+    exit(eval);
+}
+#endif
+
 static int64_t offtin(uint8_t *buf)
 {
 	int64_t y;
@@ -96,15 +137,6 @@ int bspatch(const uint8_t* old, int64_t oldsize, uint8_t* new, int64_t newsize, 
 
 #if defined(BSPATCH_EXECUTABLE)
 
-#include <bzlib.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <err.h>
-#include <unistd.h>
-#include <fcntl.h>
-
 static int bz2_read(const struct bspatch_stream* stream, void* buffer, int length)
 {
 	int n;
@@ -129,11 +161,12 @@ int main(int argc,char * argv[])
 	int64_t oldsize, newsize;
 	BZFILE* bz2;
 	struct bspatch_stream stream;
+	printf("bspatch is running...\n"); // Added printf statement
 
 	if(argc!=4) errx(1,"usage: %s oldfile newfile patchfile\n",argv[0]);
 
 	/* Open patch file */
-	if ((f = fopen(argv[3], "r")) == NULL)
+	if ((f = fopen(argv[3], "rb")) == NULL)
 		err(1, "fopen(%s)", argv[3]);
 
 	/* Read header */
@@ -153,7 +186,7 @@ int main(int argc,char * argv[])
 		errx(1,"Corrupt patch\n");
 
 	/* Close patch file and re-open it via libbzip2 at the right places */
-	if(((fd=open(argv[1],O_RDONLY,0))<0) ||
+	if(((fd=open(argv[1],O_RDONLY|O_BINARY,0))<0) ||
 		((oldsize=lseek(fd,0,SEEK_END))==-1) ||
 		((old=malloc(oldsize+1))==NULL) ||
 		(lseek(fd,0,SEEK_SET)!=0) ||
@@ -174,7 +207,7 @@ int main(int argc,char * argv[])
 	fclose(f);
 
 	/* Write the new file */
-	if(((fd=open(argv[2],O_CREAT|O_TRUNC|O_WRONLY,0666))<0) ||
+	if(((fd=open(argv[2],O_CREAT|O_TRUNC|O_WRONLY|O_BINARY,0666))<0) ||
 		(write(fd,new,newsize)!=newsize) || (close(fd)==-1))
 		err(1,"%s",argv[2]);
 
